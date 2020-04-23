@@ -1,11 +1,23 @@
-import React from "react"
+import React, { useState, useEffect } from "react"
 import { Formik, Field, Form, ErrorMessage } from "formik"
+
+import Recaptcha from "react-recaptcha"
+
 const encode = data => {
   return Object.keys(data)
     .map(key => encodeURIComponent(key) + "=" + encodeURIComponent(data[key]))
     .join("&")
 }
 function ContactForm() {
+  const [token, setToken] = useState(null)
+
+  useEffect(() => {
+    const script = document.createElement("script")
+    script.src = "https://www.google.com/recaptcha/api.js"
+    script.async = true
+    script.defer = true
+    document.body.appendChild(script)
+  }, [])
   return (
     <Formik
       initialValues={{ fullName: "", email: "" }}
@@ -27,26 +39,28 @@ function ContactForm() {
       }}
       onSubmit={data => {
         console.log(data)
-        fetch("/", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: encode({
-            "form-name": "contact-form",
-            ...data,
-          }),
-        })
-          .then(() => {
-            alert("send")
-            resetForm(true)
-            //navigate(form.getAttribute("action"))
+        if (token !== null) {
+          fetch("/", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: encode({
+              "form-name": "contact-form",
+              ...data,
+              "g-recaptcha-response": token,
+            }),
           })
-          .catch(error => alert(error))
+            .then(() => {
+              alert("send")
+            })
+            .catch(error => alert(error))
+        }
       }}
     >
       <Form
         name="contact-form"
         data-netlify="true"
         data-netlify-honeypot="bot-field"
+        data-netlify-recaptcha="true"
       >
         <Field type="hidden" name="form-name" />
         <Field type="hidden" name="bot-field" />
@@ -58,6 +72,20 @@ function ContactForm() {
         <label htmlFor="email">Email</label>
         <Field name="email" type="text" />
         <ErrorMessage name="email" />
+        <br />
+
+        <Recaptcha
+          sitekey={process.env.SITE_RECAPTCHA_KEY}
+          render="explicit"
+          theme="dark"
+          verifyCallback={response => {
+            setToken(response)
+          }}
+          onloadCallback={() => {
+            console.log("done loading!")
+          }}
+        />
+
         <br />
         <button type="submit">Submit</button>
       </Form>
