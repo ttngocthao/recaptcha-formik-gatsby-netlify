@@ -1,6 +1,10 @@
 import React from "react"
 import { Formik, Field, Form, ErrorMessage } from "formik"
-
+const encode = data => {
+  return Object.keys(data)
+    .map(key => encodeURIComponent(key) + "=" + encodeURIComponent(data[key]))
+    .join("&")
+}
 function ContactForm() {
   return (
     <Formik
@@ -23,9 +27,30 @@ function ContactForm() {
       }}
       onSubmit={data => {
         console.log(data)
+        fetch("/", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: encode({
+            "form-name": "contact-form",
+            ...data,
+          }),
+        })
+          .then(() => {
+            alert("send")
+            resetForm(true)
+            //navigate(form.getAttribute("action"))
+          })
+          .catch(error => alert(error))
       }}
     >
-      <Form>
+      <Form
+        name="contact-form"
+        data-netlify="true"
+        data-netlify-honeypot="bot-field"
+      >
+        <Field type="hidden" name="form-name" />
+        <Field type="hidden" name="bot-field" />
+
         <label htmlFor="fullName">Full name:</label>
         <Field name="fullName" type="text" />
         <ErrorMessage name="fullName" />
